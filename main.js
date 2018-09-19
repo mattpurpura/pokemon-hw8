@@ -12,7 +12,7 @@ var wildPokemon = require("./wildpokemon.js")
 // player.party.push(pokemon);
 // console.log(player);
 var player;
-function delayNext(next){
+function timeout(next){
     setTimeout(next, 1200);
 }
 
@@ -54,9 +54,11 @@ function chooseStarter(){
     }
 ]).then(function(response){
     if(response.choose === true){
-        let pokemon = new Pokemon(response.starterChoice);
+        let pokemon = new Pokemon(response.starterChoice, 1);
         pokemon.captured = true;
         pokemon.addToParty(player.party);
+        player.setStarter();
+        console.log(player.starter);
         displayMenu();
     }
 }) 
@@ -67,7 +69,7 @@ function displayMenu(){
         {
             type: "list",
             message: "Choose an action",
-            choices: ["Wander", "View Pokemon", "View Items"], 
+            choices: ["Wander", "View Pokemon", "Swap Starter", "View Items", "Visit Pokemon Center"], 
             name: "menu"
         }
     ]).then(function(response){
@@ -79,9 +81,32 @@ function displayMenu(){
                 player.viewParty();
                 setTimeout(displayMenu, 1500)
             break;
+            case "Swap Starter":
+                inquirer.prompt([
+                    {
+                        type: "list", 
+                        message: "Select a Pokemon as your starter.",
+                        choices: function(){
+                            let party = [];
+                            for(let i=0; i<player.party.length; i++){
+                                party.push(player.party[i].name);
+                            }
+                            return party;
+                        },
+                        name: "starter"
+                    }
+                ]).then(function(response){
+                    player.swapStarter(response.starter);
+                    timeout(displayMenu);
+                })
+            break;
             case "View Items":
                 player.viewItems();
                 setTimeout(displayMenu, 1500)
+            break;
+            case "Visit Pokemon Center":
+                player.healParty();
+                timeout(displayMenu);
             break;
         }
     })
@@ -90,8 +115,16 @@ function displayMenu(){
 var wild;
 function findPokemon(){
     
-    let random = Math.floor(Math.random()*(wildPokemon.length-1));
-    wild = new Pokemon(wildPokemon[random]);
+    let randomWild = Math.floor(Math.random()*(wildPokemon.length-1));
+    let max = player.starter.stats.level+6;
+    let min = player.starter.stats.level-6;
+    if(min>0){}
+    else{
+        min=1;
+    }
+    let wildLevel = player.generateWildLevel(max, min);
+
+    wild = new Pokemon(wildPokemon[randomWild], wildLevel);
     console.log("You found a wild "+wild.name+", level "+wild.stats.level+".");
     decideToBattle();
     function decideToBattle(){
@@ -111,10 +144,10 @@ function findPokemon(){
             case "Run":
                 let gotAway = player.run();
                 if(gotAway === true){
-                    delayNext(displayMenu);
+                    timeout(displayMenu);
                 }
                 else{
-                    delayNext(decideToBattle);
+                    timeout(decideToBattle);
                 }
             break;
         }
@@ -125,6 +158,7 @@ function findPokemon(){
 function battle(){
     let attacker = player.party[0];
     let defender = wild;
+    console.log(attacker.name +" vs. "+defender.name);
     battleTurn();
 function battleTurn(){
     inquirer.prompt([
@@ -151,32 +185,33 @@ function battleTurn(){
                         let counterChance = Math.random();
                         if(counterChance <= 0.6){
                             console.log(defender.name+" missed!");
-                            delayNext(battleTurn);
+                            timeout(battleTurn);
                         }
                         else{
                             defender.attack(attacker);  
                             let attackerAlive = attacker.checkAlive();
                             switch (attackerAlive){
                                 case true:
-                                delayNext(battleTurn);
+                                timeout(battleTurn);
                                 break;
                                 case false:
                                     console.log(attacker.name+" fainted. You lost the battle.");
-                                    delayNext(displayMenu)
+                                    timeout(displayMenu)
                                 break;
                             }// end attackeralive Switch
                         }
                     break;
                     case false:
                         console.log(defender.name+" fainted. You won the battle!");
-                        delayNext(displayMenu);
+                        attacker.addExperience(defender);
+                        timeout(displayMenu);
                     break;
                 } // end defenderAlive switch
             break;
             case "Switch Pokemon":
                 if(player.party.length === 1){
                     console.log("You have no other pokemon!")
-                    delayNext(battleTurn);
+                    timeout(battleTurn);
                 }
                 else{
                     inquirer.prompt([
@@ -196,7 +231,7 @@ function battleTurn(){
                        let index = player.selectPokemon(response.choosePokemon);
                        attacker = player.party[index];
                        console.log(attacker.name+" is now battling!");
-                       delayNext(battleTurn);
+                       timeout(battleTurn);
                     })
                 }
             break;
@@ -207,13 +242,16 @@ function battleTurn(){
                         console.log("You threw a poke ball!");
                         let catchPokemon = player.throwBall(defender);
                         if (catchPokemon === true){
-                            delayNext(displayMenu);
+                            timeout(displayMenu);
+                            player.swapStarter(defender);
                         }
                         else{
-                            delayNext(battleTurn);
+                            timeout(battleTurn);
                         }
                     break;
                     case false:
+                        console.log("You have no Poke Balls.");
+                        timeout(battleTurn);
                     break;
                 }
             break;
