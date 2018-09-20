@@ -7,6 +7,10 @@ var Player = function(name){
             type: "pokeBall", 
             count: 5, 
         },
+        {
+            type: "potion", 
+            count: 5, 
+        },
     ]
     this.viewParty = function(){
         for(let i = 0; i<this.party.length; i++){
@@ -51,6 +55,19 @@ var Player = function(name){
         }
        
     }
+    this.usePotion = function(pokemon){
+        for(let i =0; i<this.items.length; i++){
+            if (this.items[i].type === "potion"){
+                this.items[i].count--;
+                break;
+            }
+        }
+        pokemon.stats.HPreal += pokemon.stats.HPmax*0.5;
+        if(pokemon.stats.HPreal > pokemon.stats.HPmax){
+            pokemon.stats.HPreal = pokemon.stats.HPmax;
+        }
+        console.log(pokemon.name+"s HP is restored to " + pokemon.stats.HPreal);
+    }
     this.selectPokemon = function(pokemon){
         for (let i=0; i < this.party.length; i++){
             if(this.party[i].name === pokemon){
@@ -73,7 +90,7 @@ var Player = function(name){
         for(let i=0; i<this.party.length; i++){
             this.party[i].stats.HPreal = this.party[i].stats.HPmax;
         }
-        console.log("Your Pokemon have been healed");
+        
     }
     this.generateWildLevel = function(max, min){
         return Math.floor(Math.random()*(max-min))+min;

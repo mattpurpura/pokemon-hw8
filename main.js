@@ -13,7 +13,7 @@ var wildPokemon = require("./wildpokemon.js")
 // console.log(player);
 var player;
 function timeout(next){
-    setTimeout(next, 1200);
+    setTimeout(next, 1500);
 }
 
 startGame()
@@ -58,7 +58,6 @@ function chooseStarter(){
         pokemon.captured = true;
         pokemon.addToParty(player.party);
         player.setStarter();
-        console.log(player.starter);
         displayMenu();
     }
 }) 
@@ -75,7 +74,14 @@ function displayMenu(){
     ]).then(function(response){
         switch(response.menu){
             case "Wander":
-                findPokemon();
+                trainerBattle();
+                // let random = Math.random();
+                // if(random > 0.8){
+                //     trainerBattle();
+                // }
+                // else{
+                //     findPokemon();  
+                // }
             break;
             case 'View Pokemon':
                 player.viewParty();
@@ -105,16 +111,19 @@ function displayMenu(){
                 setTimeout(displayMenu, 1500)
             break;
             case "Visit Pokemon Center":
+                console.log("Please wait while we tend to your Pokemon.")
                 player.healParty();
-                timeout(displayMenu);
+                setTimeout(function(){
+                    console.log("Your Pokemon have been healed");
+                }, 2000)
+                setTimeout(displayMenu, 2500);
             break;
         }
     })
 } // end displayMenu
 
 var wild;
-function findPokemon(){
-    
+function randomPokemon(){
     let randomWild = Math.floor(Math.random()*(wildPokemon.length-1));
     let max = player.starter.stats.level+6;
     let min = player.starter.stats.level-6;
@@ -123,8 +132,14 @@ function findPokemon(){
         min=1;
     }
     let wildLevel = player.generateWildLevel(max, min);
+    let pokemon = new Pokemon(wildPokemon[randomWild], wildLevel);
+    return pokemon;
+    // console.log(pokemon);
+    
+}
 
-    wild = new Pokemon(wildPokemon[randomWild], wildLevel);
+function findPokemon(){
+    wild = randomPokemon();
     console.log("You found a wild "+wild.name+", level "+wild.stats.level+".");
     decideToBattle();
     function decideToBattle(){
@@ -154,18 +169,21 @@ function findPokemon(){
     })
     }// end decideToBattle
 } // end findPokemon
-
+var attacker;
+var defender;
 function battle(){
-    let attacker = player.party[0];
-    let defender = wild;
+    attacker = player.party[0];
+    defender = wild;
     console.log(attacker.name +" vs. "+defender.name);
     battleTurn();
+} //end battle
+
 function battleTurn(){
     inquirer.prompt([
         {
             type: "list",
             message: "Choose action", 
-            choices: ["Attack", "Switch Pokemon", "Poke Ball"],
+            choices: ["Attack", "Switch Pokemon", "Use Item"],
             name: "attackChoice"
         }
     ]).then(function(response){
@@ -235,27 +253,63 @@ function battleTurn(){
                     })
                 }
             break;
-            case "Poke Ball":
-                let hasBall = player.hasItem("pokeBall");
-                switch(hasBall){
-                    case true:
-                        console.log("You threw a poke ball!");
-                        let catchPokemon = player.throwBall(defender);
-                        if (catchPokemon === true){
-                            timeout(displayMenu);
-                            player.swapStarter(defender);
-                        }
-                        else{
+            case "Use Item":
+                inquirer.prompt([
+                    {
+                        type: "list", 
+                        message: "Select an item to use:",
+                        choices: function(){
+                            let availableItems = [];
+                                for(let i=0; i < player.items.length; i++){
+                                    if(player.items[i].count >0){
+                                        availableItems.push(player.items[i].type);
+                                    }
+                                }
+                                return availableItems;
+                        },
+                        name: "item"
+                    }
+                ]).then(function(response){
+                    switch(response.item){
+                        case "pokeBall":
+                            console.log("You threw a poke ball!");
+                            let catchPokemon = player.throwBall(defender);
+                            if (catchPokemon === true){
+                                timeout(displayMenu);
+                            }
+                            else{
+                                timeout(battleTurn);
+                            }
+                        break;
+                        case "potion":
+                            player.usePotion(attacker);
                             timeout(battleTurn);
-                        }
-                    break;
-                    case false:
-                        console.log("You have no Poke Balls.");
-                        timeout(battleTurn);
-                    break;
-                }
+                        break;
+                    }
+                })
             break;
         }//end switch
     })//end then
 }//end battleTurn
-} //end battle
+
+var trainer;
+function createTrainer(){
+    trainer = new Player("trainer");
+    let random = Math.round(Math.random()*5+1);
+    for(let i=0; i<random; i++){
+        let pokemon = randomPokemon();
+        trainer.party.push(pokemon);
+    }
+}
+function trainerBattle(){
+    console.log("A trainer has challenged you to a battle!");
+    createTrainer();
+    trainer.setStarter();
+    attacker = player.starter;
+    defender = trainer.starter;
+    
+    for(let i=0; i<trainer.party.length; i++){
+        console.log(trainer.party[i].name +": level "+trainer.party[i].stats.level);
+    }
+    battleTurn();
+}

@@ -5,8 +5,8 @@ var Pokemon = function(name, level){
         HPreal: 20+(5*(level-1)),
         attack: 5+(1*(level-1)),
         level: level,
-        nextLevel: Math.pow(2.5, level), 
-        exp: Math.pow(2.5, level-1)
+        nextLevel: Math.pow(1.2, level), 
+        exp: Math.pow(1.2, level-1)
     },
     this.addToParty = function(array){
         array.push(this);
@@ -15,6 +15,7 @@ var Pokemon = function(name, level){
     }
     this.attack = function(defender){
         defender.stats.HPreal -= this.stats.attack;
+        console.log("---------------------")
         console.log(this.name+' attacked '+defender.name+' for '+this.stats.attack+'!');
         console.log(defender.name+" has "+defender.stats.HPreal+" HP left.");
     }
@@ -43,7 +44,7 @@ var Pokemon = function(name, level){
         this.stats.level++;
         this.stats.HPmax += 5;
         this.stats.attack += 1;
-        this.stats.nextLevel *= 2.5;
+        this.stats.nextLevel *= 1.2;
         console.log(this.name+" leveled up to level "+this.stats.level+"!");
     }
 }
