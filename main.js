@@ -68,13 +68,13 @@ function displayMenu(){
         {
             type: "list",
             message: "Choose an action",
-            choices: ["Wander", "View Pokemon", "Swap Starter", "View Items", "Visit Pokemon Center"], 
+            choices: ["Wander", "Fight Trainer", "View Pokemon", "Swap Starter", "View Items", "Visit Pokemon Center"], 
             name: "menu"
         }
     ]).then(function(response){
         switch(response.menu){
             case "Wander":
-                trainerBattle();
+                findPokemon();
                 // let random = Math.random();
                 // if(random > 0.8){
                 //     trainerBattle();
@@ -82,6 +82,9 @@ function displayMenu(){
                 // else{
                 //     findPokemon();  
                 // }
+            break;
+            case "Fight Trainer":
+                trainerBattle();
             break;
             case 'View Pokemon':
                 player.viewParty();
@@ -125,14 +128,14 @@ function displayMenu(){
 var wild;
 function randomPokemon(){
     let randomWild = Math.floor(Math.random()*(wildPokemon.length-1));
-    let max = player.starter.stats.level+6;
-    let min = player.starter.stats.level-6;
+    let max = player.starter.stats.level+3;
+    let min = player.starter.stats.level-3;
     if(min>0){}
     else{
         min=1;
     }
     let wildLevel = player.generateWildLevel(max, min);
-    let pokemon = new Pokemon(wildPokemon[randomWild], wildLevel);
+    let pokemon = new Pokemon(wildPokemon[randomWild], 1);
     return pokemon;
     // console.log(pokemon);
     
@@ -172,7 +175,18 @@ function findPokemon(){
 var attacker;
 var defender;
 function battle(){
-    attacker = player.party[0];
+    if (player.starter.stats.HPreal > 0){
+        attacker = player.party[0];
+    }
+    else{
+        for(let i=1; i < player.party.length; i++){
+            if(player.party[i].stats.HPreal > 0){
+                attacker = player.party[i];
+                break;
+            }
+        }
+    }
+    
     defender = wild;
     console.log(attacker.name +" vs. "+defender.name);
     battleTurn();
@@ -213,16 +227,43 @@ function battleTurn(){
                                 timeout(battleTurn);
                                 break;
                                 case false:
-                                    console.log(attacker.name+" fainted. You lost the battle.");
-                                    timeout(displayMenu)
+                                    console.log(attacker.name+" fainted");
+                                    let pokemonLeft = player.pokemonAvailable();
+                                    if(pokemonLeft === true){
+                                        timeout(battleTurn);
+                                    }
+                                    else{
+                                        console.log(attacker.name+" fainted.  The trainer defeated you in battle.");
+                                        timeout(displayMenu);
+                                    }
                                 break;
                             }// end attackeralive Switch
                         }
                     break;
                     case false:
-                        console.log(defender.name+" fainted. You won the battle!");
-                        attacker.addExperience(defender);
-                        timeout(displayMenu);
+                    attacker.addExperience(defender);
+                        if(defender.stats.captured === true){
+                            console.log(defender.name+" fainted.")
+                            for(let i=0; i < trainer.party.length; i++){
+                                if(trainer.party[i].stats.HPreal > 0){
+                                    defender = trainer.party[i];
+                                    break;
+                                }
+                            } 
+                            if(defender.stats.HPreal > 0){
+                                console.log("Trainer sent out "+ defender.name);
+                                timeout(battleTurn);
+                            }
+                            else{
+                                console.log("You defeated the trainer!")
+                                timeout(displayMenu);
+                            }
+                        }
+                        else{
+                            console.log(defender.name+" fainted. You won the battle!");
+                            timeout(displayMenu);
+                        }
+                        
                     break;
                 } // end defenderAlive switch
             break;
@@ -272,12 +313,18 @@ function battleTurn(){
                 ]).then(function(response){
                     switch(response.item){
                         case "pokeBall":
-                            console.log("You threw a poke ball!");
-                            let catchPokemon = player.throwBall(defender);
-                            if (catchPokemon === true){
-                                timeout(displayMenu);
+                            if(defender.stats.captured === false){
+                                console.log("You threw a poke ball!");
+                                let catchPokemon = player.throwBall(defender);
+                                if (catchPokemon === true){
+                                    timeout(displayMenu);
+                                }
+                                else{
+                                    timeout(battleTurn);
+                                }
                             }
                             else{
+                                console.log("You can't catch another trainer's pokemon!");
                                 timeout(battleTurn);
                             }
                         break;
@@ -298,18 +345,21 @@ function createTrainer(){
     let random = Math.round(Math.random()*5+1);
     for(let i=0; i<random; i++){
         let pokemon = randomPokemon();
-        trainer.party.push(pokemon);
+        pokemon.addToParty(trainer.party);
     }
 }
 function trainerBattle(){
+
     console.log("A trainer has challenged you to a battle!");
     createTrainer();
     trainer.setStarter();
     attacker = player.starter;
     defender = trainer.starter;
-    
-    for(let i=0; i<trainer.party.length; i++){
-        console.log(trainer.party[i].name +": level "+trainer.party[i].stats.level);
-    }
-    battleTurn();
+    setTimeout(function(){
+        console.log("The trainer sent out "+trainer.starter.name+" level "+trainer.starter.stats.level);
+    }, 1000)
+    setTimeout(function(){
+        console.log("You sent out " + player.starter.name);
+    }, 1700)
+    setTimeout(battleTurn, 2000);
 }

@@ -23,6 +23,20 @@ var Player = function(name){
         }
         
     }
+    this.pokemonAvailable = function(){
+        let availableArray = []
+        for(let i = 0; i < this.party.length; i++){
+            if(this.party[i].stats.HPreal > 0){
+                availableArray.push(this.party[i]);
+            }
+        }
+        if (availableArray.length > 0){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
     this.viewItems = function(){
         console.log(this.items)
     }

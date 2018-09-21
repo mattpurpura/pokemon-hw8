@@ -6,12 +6,12 @@ var Pokemon = function(name, level){
         attack: 5+(1*(level-1)),
         level: level,
         nextLevel: Math.pow(1.2, level), 
-        exp: Math.pow(1.2, level-1)
+        exp: Math.pow(1.2, level-1), 
+        captured: false
     },
     this.addToParty = function(array){
         array.push(this);
-        captured = true;
-        console.log(array);
+        this.stats.captured = true;
     }
     this.attack = function(defender){
         defender.stats.HPreal -= this.stats.attack;
